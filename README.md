@@ -10,12 +10,17 @@
 
 ## 핵심 기능
 - 이름 + 비밀번호 로그인
+- 로그인 사용자 비밀번호 변경
 - 관리자/유저 권한 분리
 - 월별 납부 현황 테이블
 - 유저 입금 확인 요청
 - 관리자 승인/반려
+- 관리자 직접 입금 등록
+- 관리자 월별 강제 완납 처리
 - 관리자 출금 등록
 - 관리자 잔액 조정
+- 멤버별 월 회비 금액 설정
+- 관리자 멤버 비밀번호 조회
 - 실시간 잔액 집계
 
 ## 프로젝트 구조
@@ -51,9 +56,12 @@ npm run dev
 ## 기본 관리자 계정
 `server/.env`의 값으로 최초 1회 자동 생성됩니다.
 - ADMIN_NAME=admin
-- ADMIN_PASSWORD=admin1234
+- ADMIN_PASSWORD=kimjh99023
 
 운영에서는 반드시 변경하세요.
+
+추가 보안 키:
+- PASSWORD_VIEW_SECRET=change-this-password-view-secret
 
 ## MongoDB Atlas 연결
 `server/.env`의 `MONGODB_URI`를 Atlas 연결 문자열로 바꾸면 됩니다.

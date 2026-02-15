@@ -15,6 +15,18 @@ const ledgerEntrySchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     monthKey: { type: String, default: null },
     note: { type: String, default: "" },
+    source: {
+      type: String,
+      enum: [
+        "user_request",
+        "admin_direct",
+        "admin_force_paid",
+        "admin_withdrawal",
+        "admin_adjustment",
+        "admin_force_zero",
+      ],
+      default: "user_request",
+    },
     requestedAt: { type: Date, default: Date.now },
     approvedAt: { type: Date, default: null },
     member: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

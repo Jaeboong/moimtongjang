@@ -10,4 +10,5 @@ export const config = {
   clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
   adminName: process.env.ADMIN_NAME || "admin",
   adminPassword: process.env.ADMIN_PASSWORD || "admin1234",
+  passwordViewSecret: process.env.PASSWORD_VIEW_SECRET || "change-this-password-view-secret",
 };
