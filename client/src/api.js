@@ -42,7 +42,8 @@ export const api = {
       body: JSON.stringify({ monthlyFee }),
     }),
 
-  getSummary: () => request("/ledger/summary?months=6"),
+  getSummary: (year) => request(`/ledger/summary?year=${encodeURIComponent(year)}`),
+  getMonthlyTotals: (year) => request(`/ledger/monthly-totals?year=${encodeURIComponent(year)}`),
   getTransactions: () => request("/ledger/transactions?limit=200"),
   getBalance: () => request("/ledger/balance"),
 

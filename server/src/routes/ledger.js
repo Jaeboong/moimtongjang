@@ -10,6 +10,7 @@ import {
   forceUnpaid,
   forceZeroPaid,
   getBalance,
+  getMonthlyTotals,
   getSummary,
   getTransactions,
   requestDeposit,
@@ -19,6 +20,7 @@ import {
 const router = Router();
 
 router.get("/summary", authRequired, getSummary);
+router.get("/monthly-totals", authRequired, getMonthlyTotals);
 router.get("/transactions", authRequired, getTransactions);
 router.get("/balance", authRequired, getBalance);
 

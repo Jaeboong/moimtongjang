@@ -39,6 +39,7 @@ body {
 .title {
   font-size: 18px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .badge {
@@ -49,20 +50,21 @@ body {
 }
 
 .tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid #dbe4f0;
   margin-bottom: 12px;
 }
 
 .tabs button {
+  flex: 1 0 120px;
   border: 0;
   padding: 10px;
   font-weight: 700;
   background: #fff;
   color: #1f2937;
+  white-space: nowrap;
 }
 
 .tabs button.active {
@@ -77,8 +79,6 @@ body {
 }
 
 table {
-  width: 100%;
-  min-width: 620px;
   border-collapse: collapse;
 }
 
@@ -93,6 +93,44 @@ td {
 
 th {
   background: #f9fbff;
+}
+
+.table-wrap table.month-grid-table {
+  width: max-content;
+  table-layout: fixed;
+}
+
+.table-wrap table.month-grid-table th:first-child,
+.table-wrap table.month-grid-table td:first-child {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+}
+
+.table-wrap table.month-grid-table th:not(:first-child),
+.table-wrap table.month-grid-table td:not(:first-child) {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.panel-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.panel-head-title {
+  white-space: nowrap;
+}
+
+.year-select {
+  width: auto;
+  min-width: 96px;
+  max-width: 110px;
+  white-space: nowrap;
 }
 
 .pill {
@@ -217,12 +255,36 @@ button.danger {
   flex: 1;
 }
 
+.month-cell-actions {
+  margin-top: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+.month-action-btn {
+  width: 100%;
+  white-space: nowrap;
+}
+
 .tx-footer {
   margin-top: 8px;
   text-align: right;
   color: #334155;
   font-size: 12px;
   font-weight: 700;
+}
+
+.tx-bottom {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.tx-bottom .tx-footer {
+  margin-top: 0;
+  white-space: nowrap;
 }
 
 @media (min-width: 700px) {

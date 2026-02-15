@@ -62,13 +62,10 @@ export default function TransactionsCard({
               </span>
             </div>
 
-            <div className="meta">출처: {sourceLabel(tx.source)}</div>
-            <div className="meta">대상: {tx.memberName || "-"}</div>
-            <div className="meta">월: {tx.monthKey || "-"}</div>
-            <div className="meta">상태: {tx.status}</div>
-            <div className="meta">요청일: {toKRDate(tx.requestedAt)}</div>
-            <div className="meta">승인일: {toKRDate(tx.approvedAt)}</div>
-            {tx.note ? <div className="meta">메모: {tx.note}</div> : null}
+            <div className="meta">{sourceLabel(tx.source)}</div>
+            <div className="meta">{tx.memberName || "-"}</div>
+            <div className="meta">{tx.monthKey || "-"}</div>
+            <div className="meta">{toKRDate(tx.requestedAt)}</div>
 
             {isAdmin ? (
               <div className="actions" style={{ marginTop: 8 }}>
@@ -116,8 +113,11 @@ export default function TransactionsCard({
               </div>
             ) : null}
 
-            <div className="tx-footer">
-              처리 후 잔액: {tx.balanceAfter === null || tx.balanceAfter === undefined ? "-" : `${money(tx.balanceAfter)}원`}
+            <div className="tx-bottom">
+              <div className="meta">{tx.note ? `메모: ${tx.note}` : ""}</div>
+              <div className="tx-footer">
+                잔액: {tx.balanceAfter === null || tx.balanceAfter === undefined ? "-" : `${money(tx.balanceAfter)}원`}
+              </div>
             </div>
           </div>
         ))}
