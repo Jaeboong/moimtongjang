@@ -20,6 +20,7 @@ const ledgerEntrySchema = new mongoose.Schema(
       enum: [
         "user_request",
         "admin_direct",
+        "admin_sponsorship",
         "admin_force_paid",
         "admin_withdrawal",
         "admin_adjustment",

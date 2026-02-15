@@ -1,10 +1,34 @@
-﻿import { money, monthLabel, toKRDate } from "../../utils/format";
+﻿import { money, monthLabel } from "../../utils/format";
 
-export default function MonthlyStatusCard({ summary, isAdmin, onForcePaid, onForceUnpaid, onForceZeroPaid }) {
+export default function MonthlyStatusCard({
+  summary,
+  selectedYear,
+  availableYears,
+  onSelectYear,
+  isAdmin,
+  onForcePaid,
+  onForceUnpaid,
+  onForceZeroPaid,
+}) {
+  const yearOptions = availableYears.length > 0 ? availableYears : [selectedYear];
+
   return (
     <div className="card" style={{ marginBottom: 12 }}>
+      <div className="panel-head">
+        <div className="title panel-head-title" style={{ fontSize: 16 }}>
+          월별 납부 현황
+        </div>
+        <select className="year-select" value={selectedYear} onChange={(e) => onSelectYear(Number(e.target.value))}>
+          {yearOptions.map((year) => (
+            <option key={year} value={year}>
+              {year}년
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="table-wrap">
-        <table>
+        <table className="month-grid-table">
           <thead>
             <tr>
               <th>회원</th>
@@ -18,10 +42,17 @@ export default function MonthlyStatusCard({ summary, isAdmin, onForcePaid, onFor
               <tr key={row.userId}>
                 <td>
                   <div>{row.userName}</div>
-                  <div className="meta">월회비 {money(row.monthlyFee)}원</div>
+                  {!row.isDonation ? <div className="meta">월회비 {money(row.monthlyFee)}원</div> : null}
                 </td>
                 {summary.monthKeys.map((monthKey) => {
                   const cell = row.months[monthKey];
+                  if (row.isDonation) {
+                    return (
+                      <td key={monthKey}>
+                        <div>입금 {money(cell.amount)}원</div>
+                      </td>
+                    );
+                  }
                   return (
                     <td key={monthKey}>
                       <div>
@@ -36,29 +67,19 @@ export default function MonthlyStatusCard({ summary, isAdmin, onForcePaid, onFor
                         </span>
                       </div>
                       <div>납부 {money(cell.amount)}원</div>
-                      <div className="meta">기준 {money(cell.dueAmount)}원</div>
-                      {cell.pendingAmount > 0 ? <div className="meta">요청 {money(cell.pendingAmount)}원</div> : null}
-                      <div className="meta">요청 {toKRDate(cell.requestedAt)}</div>
-                      <div className="meta">승인 {toKRDate(cell.approvedAt)}</div>
                       {isAdmin && cell.status !== "paid" ? (
-                        <div style={{ marginTop: 6, display: "flex", gap: 4 }}>
-                          <button
-                            className="secondary mini"
-                            onClick={() => onForcePaid(row.userId, monthKey)}
-                          >
+                        <div className="month-cell-actions">
+                          <button className="secondary mini month-action-btn" onClick={() => onForcePaid(row.userId, monthKey)}>
                             완납 처리
                           </button>
-                          <button
-                            className="secondary mini"
-                            onClick={() => onForceZeroPaid(row.userId, monthKey)}
-                          >
+                          <button className="secondary mini month-action-btn" onClick={() => onForceZeroPaid(row.userId, monthKey)}>
                             0원 완납
                           </button>
                         </div>
                       ) : null}
                       {isAdmin && cell.status === "paid" ? (
                         <button
-                          className="danger mini"
+                          className="danger mini month-action-btn"
                           style={{ marginTop: 6 }}
                           onClick={() => onForceUnpaid(row.userId, monthKey)}
                         >

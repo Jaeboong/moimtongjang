@@ -8,29 +8,41 @@ import AdminMemberManagementCard from "./features/admin/AdminMemberManagementCar
 import AdminPendingRequestsCard from "./features/admin/AdminPendingRequestsCard";
 import TransactionsCard from "./features/ledger/TransactionsCard";
 import MonthlyStatusCard from "./features/monthly/MonthlyStatusCard";
+import MonthlyTotalsCard from "./features/monthly/MonthlyTotalsCard";
 import UserDepositRequestCard from "./features/user/UserDepositRequestCard";
 import { money } from "./utils/format";
+
+const DONATION_TARGET = {
+  id: "donation",
+  name: "찬조금",
+  role: "special",
+};
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [summary, setSummary] = useState({ monthKeys: [], rows: [] });
+  const [monthlyTotals, setMonthlyTotals] = useState({ monthKeys: [], totals: [] });
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState(0);
   const [tab, setTab] = useState("monthly");
   const [error, setError] = useState("");
 
   const members = useMemo(() => users.filter((item) => item.role === "user"), [users]);
+  const depositTargets = useMemo(() => [...members, DONATION_TARGET], [members]);
   const pendingDeposits = useMemo(
     () => transactions.filter((tx) => tx.type === "deposit" && tx.status === "pending"),
     [transactions]
   );
 
-  async function loadDashboard() {
-    const [me, userList, summaryData, txData, balanceData] = await Promise.all([
+  async function loadDashboard(year = selectedYear) {
+    const [me, userList, summaryData, totalsData, txData, balanceData] = await Promise.all([
       api.me(),
       api.listUsers(),
-      api.getSummary(),
+      api.getSummary(year),
+      api.getMonthlyTotals(year),
       api.getTransactions(),
       api.getBalance(),
     ]);
@@ -38,6 +50,12 @@ export default function App() {
     setUser(me);
     setUsers(userList);
     setSummary(summaryData);
+    setMonthlyTotals(totalsData);
+    setAvailableYears(summaryData.availableYears || totalsData.availableYears || []);
+    const nextSelectedYear = summaryData.selectedYear || totalsData.selectedYear;
+    if (nextSelectedYear && nextSelectedYear !== selectedYear) {
+      setSelectedYear(nextSelectedYear);
+    }
     setTransactions(txData);
     setBalance(balanceData.balance);
   }
@@ -53,18 +71,19 @@ export default function App() {
 
   useEffect(() => {
     if (!localStorage.getItem("token")) return;
-    loadDashboard().catch((err) => {
+    loadDashboard(selectedYear).catch((err) => {
       setError(err.message);
       localStorage.removeItem("token");
       setUser(null);
     });
-  }, []);
+  }, [selectedYear]);
 
   function logout() {
     localStorage.removeItem("token");
     setUser(null);
     setUsers([]);
     setSummary({ monthKeys: [], rows: [] });
+    setMonthlyTotals({ monthKeys: [], totals: [] });
     setTransactions([]);
     setBalance(0);
   }
@@ -82,7 +101,7 @@ export default function App() {
   async function handleLogin({ name, password }) {
     const data = await api.login({ name, password });
     localStorage.setItem("token", data.token);
-    await reload();
+    await loadDashboard(selectedYear);
   }
 
   async function handleChangePassword(payload) {
@@ -172,6 +191,9 @@ export default function App() {
         <button className={tab === "monthly" ? "active" : ""} onClick={() => setTab("monthly")}>
           월별 납부 현황
         </button>
+        <button className={tab === "totals" ? "active" : ""} onClick={() => setTab("totals")}>
+          월별 합계
+        </button>
         <button className={tab === "ledger" ? "active" : ""} onClick={() => setTab("ledger")}>
           입금/출금 내역
         </button>
@@ -180,12 +202,26 @@ export default function App() {
       {tab === "monthly" ? (
         <MonthlyStatusCard
           summary={summary}
+          selectedYear={selectedYear}
+          availableYears={availableYears}
+          onSelectYear={setSelectedYear}
           isAdmin={user.role === "admin"}
           onForcePaid={handleForcePaid}
           onForceUnpaid={handleForceUnpaid}
           onForceZeroPaid={handleForceZeroPaid}
         />
-      ) : (
+      ) : null}
+
+      {tab === "totals" ? (
+        <MonthlyTotalsCard
+          totalsData={monthlyTotals}
+          selectedYear={selectedYear}
+          availableYears={availableYears}
+          onSelectYear={setSelectedYear}
+        />
+      ) : null}
+
+      {tab === "ledger" ? (
         <TransactionsCard
           transactions={transactions}
           isAdmin={user.role === "admin"}
@@ -193,7 +229,7 @@ export default function App() {
           onUpdateEntry={handleUpdateEntry}
           onDeleteEntry={handleDeleteEntry}
         />
-      )}
+      ) : null}
 
       <UserDepositRequestCard monthKeys={summary.monthKeys} onSubmitRequest={handleRequestDeposit} />
 
@@ -206,7 +242,7 @@ export default function App() {
           />
 
           <AdminDirectDepositCard
-            depositTargets={members}
+            depositTargets={depositTargets}
             monthKeys={summary.monthKeys}
             onSubmitDeposit={handleAdminDeposit}
           />

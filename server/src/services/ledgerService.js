@@ -2,6 +2,8 @@
 
 const START_YEAR = 2025;
 const START_MONTH_INDEX = 9; // October (0-based)
+const DONATION_SOURCE = "admin_sponsorship";
+const DONATION_ROW_ID = "donation";
 
 export function monthKeyValid(monthKey) {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey);
@@ -21,6 +23,43 @@ export function makeRecentMonthKeys(total) {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     out.push(`${year}-${month}`);
     date.setMonth(date.getMonth() - 1);
+  }
+
+  return out;
+}
+
+export function getSummaryAvailableYears() {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let year = currentYear; year >= START_YEAR; year -= 1) {
+    years.push(year);
+  }
+  return years;
+}
+
+export function resolveSummaryYear(rawYear) {
+  const availableYears = getSummaryAvailableYears();
+  const parsed = Number(rawYear);
+  const selectedYear =
+    Number.isInteger(parsed) && availableYears.includes(parsed) ? parsed : availableYears[0];
+
+  return { selectedYear, availableYears };
+}
+
+export function makeYearMonthKeys(year) {
+  const out = [];
+  const minDate = new Date(START_YEAR, START_MONTH_INDEX, 1);
+  const now = new Date();
+  const maxMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+  minDate.setHours(0, 0, 0, 0);
+
+  for (let month = maxMonth; month >= 1; month -= 1) {
+    const cursor = new Date(year, month - 1, 1);
+    cursor.setHours(0, 0, 0, 0);
+    if (cursor < minDate) {
+      continue;
+    }
+    out.push(`${year}-${String(month).padStart(2, "0")}`);
   }
 
   return out;
@@ -132,13 +171,65 @@ export function buildSummaryRows(users, entries, monthKeys) {
       userId: user.id,
       userName: user.name,
       monthlyFee: fee,
+      isDonation: false,
       months: initialMonths,
     });
   }
 
+  const donationMonths = Object.fromEntries(
+    monthKeys.map((key) => [
+      key,
+      {
+        amount: 0,
+        approvedCount: 0,
+        dueAmount: 0,
+        remainingAmount: 0,
+        pendingAmount: 0,
+        forceZeroPaid: false,
+        status: "donation",
+        requestedAt: null,
+        approvedAt: null,
+      },
+    ])
+  );
+
+  const donationRow = {
+    userId: DONATION_ROW_ID,
+    userName: "찬조금",
+    monthlyFee: 0,
+    isDonation: true,
+    months: donationMonths,
+  };
+
   for (const entry of entries) {
+    if (!entry.monthKey) {
+      continue;
+    }
+
+    if (entry.source === DONATION_SOURCE) {
+      const donationCell = donationRow.months[entry.monthKey];
+      if (!donationCell) {
+        continue;
+      }
+
+      if (entry.status === "approved") {
+        donationCell.amount += entry.amount;
+        donationCell.approvedCount += 1;
+        donationCell.approvedAt = entry.approvedAt || donationCell.approvedAt;
+      }
+
+      if (entry.status === "pending") {
+        donationCell.pendingAmount += entry.amount;
+      }
+
+      if (entry.requestedAt && (!donationCell.requestedAt || entry.requestedAt > donationCell.requestedAt)) {
+        donationCell.requestedAt = entry.requestedAt;
+      }
+      continue;
+    }
+
     const memberId = entry.member ? String(entry.member) : null;
-    if (!memberId || !rowMap.has(memberId) || !entry.monthKey) {
+    if (!memberId || !rowMap.has(memberId)) {
       continue;
     }
 
@@ -200,7 +291,7 @@ export function buildSummaryRows(users, entries, monthKeys) {
     }
   }
 
-  return Array.from(rowMap.values());
+  return [...Array.from(rowMap.values()), donationRow];
 }
 
 export async function fetchTransactionsWithBalance(limit) {
@@ -264,4 +355,63 @@ export async function fetchTransactionsWithBalance(limit) {
     approvedByName: entry.approvedBy?.name || null,
     balanceAfter: balanceAfterById.get(String(entry._id)) ?? null,
   }));
+}
+
+export async function fetchMonthlyTotalsForYear(selectedYear, monthKeys) {
+  const start = new Date(selectedYear, 0, 1);
+  const end = new Date(selectedYear + 1, 0, 1);
+
+  const entries = await LedgerEntry.find({
+    status: "approved",
+    requestedAt: { $gte: start, $lt: end },
+  }).select("type amount requestedAt");
+
+  const totalsByMonth = Object.fromEntries(
+    monthKeys.map((monthKey) => [
+      monthKey,
+      {
+        monthKey,
+        income: 0,
+        expense: 0,
+        net: 0,
+      },
+    ])
+  );
+
+  for (const entry of entries) {
+    const at = new Date(entry.requestedAt);
+    if (Number.isNaN(at.getTime())) {
+      continue;
+    }
+
+    const monthKey = `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}`;
+    const row = totalsByMonth[monthKey];
+    if (!row) {
+      continue;
+    }
+
+    if (entry.type === "deposit") {
+      row.income += entry.amount;
+      continue;
+    }
+
+    if (entry.type === "withdrawal") {
+      row.expense += entry.amount;
+      continue;
+    }
+
+    if (entry.type === "adjustment") {
+      if (entry.amount >= 0) {
+        row.income += entry.amount;
+      } else {
+        row.expense += Math.abs(entry.amount);
+      }
+    }
+  }
+
+  return monthKeys.map((monthKey) => {
+    const row = totalsByMonth[monthKey];
+    row.net = row.income - row.expense;
+    return row;
+  });
 }

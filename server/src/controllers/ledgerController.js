@@ -5,15 +5,19 @@ import {
   buildSummaryRows,
   calculateBalance,
   createApprovedDeposit,
+  fetchMonthlyTotalsForYear,
   fetchTransactionsWithBalance,
-  makeRecentMonthKeys,
+  makeYearMonthKeys,
   monthKeyValid,
+  resolveSummaryYear,
   validateAmountByType,
 } from "../services/ledgerService.js";
 
+const DONATION_TARGET_ID = "donation";
+
 export async function getSummary(req, res) {
-  const months = Math.min(Math.max(Number(req.query.months || 6), 1), 12);
-  const monthKeys = makeRecentMonthKeys(months);
+  const { selectedYear, availableYears } = resolveSummaryYear(req.query.year);
+  const monthKeys = makeYearMonthKeys(selectedYear);
 
   const users = await User.find({ role: "user" }).select("_id name monthlyFee").sort({ name: 1 });
   const entries = await LedgerEntry.find({
@@ -22,6 +26,8 @@ export async function getSummary(req, res) {
   }).select("member monthKey amount status source requestedAt approvedAt");
 
   return res.json({
+    selectedYear,
+    availableYears,
     monthKeys,
     rows: buildSummaryRows(users, entries, monthKeys),
   });
@@ -31,6 +37,19 @@ export async function getTransactions(req, res) {
   const limit = Math.min(Math.max(Number(req.query.limit || 150), 1), 500);
   const rows = await fetchTransactionsWithBalance(limit);
   return res.json(rows);
+}
+
+export async function getMonthlyTotals(req, res) {
+  const { selectedYear, availableYears } = resolveSummaryYear(req.query.year);
+  const monthKeys = makeYearMonthKeys(selectedYear);
+  const totals = await fetchMonthlyTotalsForYear(selectedYear, monthKeys);
+
+  return res.json({
+    selectedYear,
+    availableYears,
+    monthKeys,
+    totals,
+  });
 }
 
 export async function getBalance(_req, res) {
@@ -78,6 +97,7 @@ export async function adminDeposit(req, res) {
   const note = String(req.body?.note || "").trim();
   const memberIdRaw = req.body?.memberId;
   const memberId = memberIdRaw ? String(memberIdRaw).trim() : null;
+  const isDonationTarget = memberId === DONATION_TARGET_ID;
 
   if (!Number.isFinite(amount) || amount <= 0) {
     return res.status(400).json({ message: "amount must be a positive number" });
@@ -88,7 +108,7 @@ export async function adminDeposit(req, res) {
   }
 
   let member = null;
-  if (memberId) {
+  if (memberId && !isDonationTarget) {
     if (!mongoose.Types.ObjectId.isValid(memberId)) {
       return res.status(400).json({ message: "Invalid memberId" });
     }
@@ -103,10 +123,10 @@ export async function adminDeposit(req, res) {
     amount,
     monthKey,
     note,
-    memberId: member?._id || null,
+    memberId: isDonationTarget ? null : member?._id || null,
     requestedBy: req.auth.userId,
     approvedBy: req.auth.userId,
-    source: "admin_direct",
+    source: isDonationTarget ? "admin_sponsorship" : "admin_direct",
   });
 
   return res.status(201).json({ id: entry.id });

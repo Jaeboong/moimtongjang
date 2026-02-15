@@ -37,7 +37,7 @@ export default function AdminDirectDepositCard({ depositTargets, monthKeys, onSu
           <select value={memberId} onChange={(e) => setMemberId(e.target.value)} required>
             {depositTargets.map((member) => (
               <option key={member.id} value={member.id}>
-                {member.name} ({member.role})
+                {member.role === "special" ? member.name : `${member.name} (${member.role})`}
               </option>
             ))}
           </select>
