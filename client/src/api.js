@@ -1,4 +1,5 @@
-﻿const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000/api";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000/api";
+const HEALTH_URL = `${API_BASE.replace(/\/api\/?$/, "")}/health`;
 
 function authHeaders() {
   const token = localStorage.getItem("token");
@@ -63,4 +64,12 @@ export const api = {
 
   createWithdrawal: (payload) => request("/ledger/withdrawals", { method: "POST", body: JSON.stringify(payload) }),
   createAdjustment: (payload) => request("/ledger/adjustments", { method: "POST", body: JSON.stringify(payload) }),
+
+  pingHealth: async () => {
+    try {
+      await fetch(HEALTH_URL, { method: "GET", cache: "no-store" });
+    } catch (_error) {
+      // Intentionally ignore keep-alive failures.
+    }
+  },
 };

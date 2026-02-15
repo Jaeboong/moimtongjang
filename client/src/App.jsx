@@ -18,6 +18,7 @@ const DONATION_TARGET = {
   name: "찬조금",
   role: "special",
 };
+const KEEP_ALIVE_INTERVAL_MS = 14 * 60 * 1000;
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -100,6 +101,19 @@ export default function App() {
       setUser(null);
     });
   }, [selectedYear]);
+
+  useEffect(() => {
+    if (!import.meta.env.PROD) {
+      return;
+    }
+
+    api.pingHealth();
+    const timer = setInterval(() => {
+      api.pingHealth();
+    }, KEEP_ALIVE_INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, []);
 
   function logout() {
     localStorage.removeItem("token");
