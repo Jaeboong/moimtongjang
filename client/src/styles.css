@@ -20,6 +20,17 @@ body {
   padding: 16px;
 }
 
+.wake-container {
+  display: grid;
+  place-items: center;
+}
+
+.wake-card {
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+
 .card {
   background: #fff;
   border: 1px solid #dbe4f0;

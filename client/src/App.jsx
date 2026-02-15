@@ -1,6 +1,7 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import LoginCard from "./components/LoginCard";
+import WakeScreen from "./components/WakeScreen";
 import ChangePasswordCard from "./features/account/ChangePasswordCard";
 import AdminCashOpsCard from "./features/admin/AdminCashOpsCard";
 import AdminDirectDepositCard from "./features/admin/AdminDirectDepositCard";
@@ -29,6 +30,8 @@ export default function App() {
   const [balance, setBalance] = useState(0);
   const [tab, setTab] = useState("monthly");
   const [error, setError] = useState("");
+  const [showWakeScreen, setShowWakeScreen] = useState(false);
+  const wakeRequestIdRef = useRef(0);
 
   const members = useMemo(() => users.filter((item) => item.role === "user"), [users]);
   const depositTargets = useMemo(() => [...members, DONATION_TARGET], [members]);
@@ -60,6 +63,26 @@ export default function App() {
     setBalance(balanceData.balance);
   }
 
+  async function runWithWakeScreen(task) {
+    const requestId = wakeRequestIdRef.current + 1;
+    wakeRequestIdRef.current = requestId;
+
+    const wakeTimer = setTimeout(() => {
+      if (wakeRequestIdRef.current === requestId) {
+        setShowWakeScreen(true);
+      }
+    }, 800);
+
+    try {
+      return await task();
+    } finally {
+      clearTimeout(wakeTimer);
+      if (wakeRequestIdRef.current === requestId) {
+        setShowWakeScreen(false);
+      }
+    }
+  }
+
   async function reload() {
     setError("");
     try {
@@ -71,7 +94,7 @@ export default function App() {
 
   useEffect(() => {
     if (!localStorage.getItem("token")) return;
-    loadDashboard(selectedYear).catch((err) => {
+    runWithWakeScreen(() => loadDashboard(selectedYear)).catch((err) => {
       setError(err.message);
       localStorage.removeItem("token");
       setUser(null);
@@ -99,9 +122,11 @@ export default function App() {
   }
 
   async function handleLogin({ name, password }) {
-    const data = await api.login({ name, password });
-    localStorage.setItem("token", data.token);
-    await loadDashboard(selectedYear);
+    await runWithWakeScreen(async () => {
+      const data = await api.login({ name, password });
+      localStorage.setItem("token", data.token);
+      await loadDashboard(selectedYear);
+    });
   }
 
   async function handleChangePassword(payload) {
@@ -161,6 +186,9 @@ export default function App() {
   }
 
   if (!user) {
+    if (showWakeScreen) {
+      return <WakeScreen />;
+    }
     return <LoginCard onLogin={handleLogin} />;
   }
 
@@ -264,3 +292,4 @@ export default function App() {
     </div>
   );
 }
+
